@@ -1,10 +1,11 @@
 {% extends "base.html" %}
 
 {% block title %}
-Head
+Jobs
 {% endblock %}
 
 {% block content %}
+
 <div class="container">
     <form class="input-group mt-5 my-form" action="" method="POST">
         <select class="form-select" id="inputGroupSelect01" name="task_type">
@@ -29,7 +30,7 @@ Head
                 <th scope="col">Task</th>
                 <th scope="col">Quantity</th>
                 <th scope="col">Date</th>
-                <th scope="col">Client</th>
+                <th scope="col">Client_Id</th>
                 <th scope="col">Employees</th>
                 <th></th>
             </tr>
@@ -45,6 +46,8 @@ Head
                 <td>
                     <form action="" method="POST">
                         <input type="hidden" name="id" value="{{job.id}}">
+                        <input type="hidden" name="client_id" value="{{job.client_id}}">
+                        <button type="submit" class="btn btn-link" name="action" value="map">Show Map</button>
                         <button type="submit" class="btn btn-link" name="action" value="delete">Finished</button>
                     </form>
                 </td>
