@@ -2,3 +2,4 @@ credentials.json
 instance/jobs.db
 __pycache__/*
 .vscode/settings.json
+maps_key.json

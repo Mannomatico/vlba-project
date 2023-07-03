@@ -5,6 +5,7 @@ from google.cloud import bigquery
 from google.oauth2 import service_account
 from datetime import datetime
 from queries import QUERIES
+import json
 
 app = Flask(__name__)
 
@@ -18,6 +19,10 @@ dataset_id = "vlba-maintenance-and-service.MwwMs_Data"
 credentials = service_account.Credentials.from_service_account_file("credentials.json")
 client = bigquery.Client(credentials=credentials)
 
+# maps api key
+with open('maps_key.json', 'r') as f:
+  data = json.load(f)
+maps_key = data['maps_key']
 
 class Jobs(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -57,7 +62,7 @@ def start_page():
     if request.method == "POST":
         if request.form["action"] == "map":
             return render_template(
-                "map.html", location=get_location(request.form["client_id"])
+                "map.html", location=get_location(request.form["client_id"]), maps_key = maps_key
             )
 
     # get all active jobs
@@ -65,11 +70,6 @@ def start_page():
 
     # return page
     return render_template("index.html", all_jobs=all_jobs)
-
-
-@app.route("/map", methods=["GET", "POST"])
-def mapview():
-    return render_template("example.html")
 
 
 # get a list of clients
