@@ -7,11 +7,12 @@ Map
 {% block content %}
 
 <div class="container">
-    <h2 class="mb-4">
-      Client Location
-    </h2>
-    <img src="https://maps.googleapis.com/maps/api/staticmap?center={{location}}&zoom=12&size=400x400&key=AIzaSyBr61DHLVrfV4jq2xSXsMe5kAPuEKBayFs">
-    <p><a class="link-opacity-100" href="/">Back to Overview</a></p>
+  <h2 class="mb-4 mt-5">
+    Client Location
+  </h2>
+  <img
+    src="https://maps.googleapis.com/maps/api/staticmap?center={{location}}&zoom=10&size=800x800&markers=color:red%7Clabel:S%7C{{location}}&key=AIzaSyBr61DHLVrfV4jq2xSXsMe5kAPuEKBayFs">
+  <p><a class="link-opacity-100 mt-5" href="/">Back to Overview</a></p>
 </div>
 
 {% endblock %}

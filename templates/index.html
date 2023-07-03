@@ -7,10 +7,10 @@ Jobs
 {% block content %}
 
 <div class="container">
-    <form class="input-group mt-5 my-form" action="" method="POST">
+    <h2 class="mt-5">Create Task</h2>
+    <form class="input-group mt-2 my-form" action="" method="POST">
         <select class="form-select" id="inputGroupSelect01" name="task_type">
-            <option selected>Task</option>
-            <option value="Electronics repair">Electronics repair</option>
+            <option selected value="Electronics repair">Electronics repair</option>
             <option value="Bike repair">Bike repair</option>
             <option value="Engine check">Engine check</option>
             <option value="Charging station check">Charging station check</option>
@@ -19,12 +19,13 @@ Jobs
         </select>
         <input type="text" class="form-control" placeholder="Quantity" name="quantity">
         <input type="text" class="form-control" placeholder="Client" name="client_id">
-        <button class="btn btn-outline-secondary" type="submit" name="action" value="update" >Create</button>
+        <button class="btn btn-outline-secondary" type="submit" name="action" value="update">Create</button>
     </form>
 </div>
 
 <div class="container">
-    <table class="table mt-5">
+    <h2 class="mt-5">Current Jobs</h2>
+    <table class="table mt-2">
         <thead>
             <tr>
                 <th scope="col">Task</th>
@@ -32,6 +33,7 @@ Jobs
                 <th scope="col">Date</th>
                 <th scope="col">Client_Id</th>
                 <th scope="col">Employees</th>
+                <th scope="col">Expected Time</th>
                 <th></th>
             </tr>
         </thead>
@@ -43,6 +45,7 @@ Jobs
                 <td>{{job.date_created.strftime('%d.%m.%Y %H:%M:%S')}}</td>
                 <td>{{job.client_id}}</td>
                 <td>{{job.employee_id_1}}, {{job.employee_id_2}}</td>
+                <td>{{job.total_working_hours|int}}:{% set minutes = ((job.total_working_hours*60)|int)%60 %}{{minutes}}h</td>
                 <td>
                     <form action="" method="POST">
                         <input type="hidden" name="id" value="{{job.id}}">
