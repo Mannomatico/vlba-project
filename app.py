@@ -111,79 +111,99 @@ def predict_best_team(task_type, client_id, quantity):
     best_teams = []
     if((task_type == 'Bike repair') | (task_type == 'Electronics repair') | (task_type == 'Engine check')):
         table = client.query(f'WITH predictions AS ( \
-                                    SELECT predicted_TotalWorkingHours, TeamId,Quantity \
-                                    FROM ML.PREDICT(MODEL `{dataset_id}.Facts_Model1`, \
-                                    (SELECT \
-                                    ClientId, \
-                                    Quantity, \
-                                    TaskTeamWorkingExperience, \
-                                    "{task_type}" as TaskType, \
+                              SELECT \
+                                predicted_TotalWorkingHours, \
+                                TeamId, \
+                                ClientId, \
+                                TaskType \
+                              FROM ML.PREDICT(MODEL `vlba-maintenance-and-service.MwwMs_Data.Facts_Model1`, \
+                                ( \
+                                SELECT \
+                                  ClientId, \
+                                  Quantity, \
+                                  TaskTeamWorkingExperience, \
+                                  TaskType, \
+                                 TeamId \
+                               FROM ( \
+                                 SELECT DISTINCT \
+                                   ClientId, \
+                                   Quantity, \
+                                   TaskTeamWorkingExperience, \
+                                    TaskType, \
                                     TeamId \
-                                    FROM ( \
-                                    SELECT DISTINCT \
-                                    ClientId, \
-                                    Quantity, \
-                                    TaskTeamWorkingExperience, \
-                                    "{task_type}" as TaskType, \
-                                    TeamId \
-                                    FROM `{dataset_id}.Team_Facts_Model1` \
-                                    ) \
-                                    )) \
-                                    ) \
-                                    SELECT p.predicted_TotalWorkingHours, p.TeamId,p.Quantity \
-                                    FROM predictions p \
-                                    JOIN ( \
-                                      SELECT predicted_TotalWorkingHours \
-                                     FROM predictions \
-                                      ORDER BY predicted_TotalWorkingHours \
-                                     LIMIT 20 \
-                                    ) m \
-                                    ON p.predicted_TotalWorkingHours = m.predicted_TotalWorkingHours \
-                                    ORDER BY predicted_TotalWorkingHours').result()
+                                  FROM `vlba-maintenance-and-service.MwwMs_Data.Team_Facts_Model1` \
+                                ) \
+                              )) \
+                            ) \
+                            SELECT \
+                              p.ClientId, \
+                              p.TeamId, \
+                              p.TaskType, \
+                              AVG(p.predicted_TotalWorkingHours) AS mean_predicted_TotalWorkingHours \
+                            FROM \
+                              predictions p \
+                            WHERE \
+                              p.ClientId = "{client_id}" AND \
+                              p.TaskType = "{task_type}" \
+                            GROUP BY \
+                              p.ClientId, \
+                              p.TeamId, \
+                              p.TaskType \
+                            ORDER BY mean_predicted_TotalWorkingHours').result()
 
         for row in table:
             best_teams.append(
                 {
-                    "working_time": row.predicted_TotalWorkingHours,
+                    "working_time": row.mean_predicted_TotalWorkingHours,
                     "team_id": row.TeamId
                 }
             )
     else:
         table = client.query(f'WITH predictions AS ( \
-                                    SELECT predicted_TotalWorkingHours, TeamId,Quantity \
-                                    FROM ML.PREDICT(MODEL `{dataset_id}.Facts_Model2`, \
-                                    (SELECT \
-                                    ClientId, \
-                                    Quantity, \
-                                    TaskTeamWorkingExperience, \
-                                    "{task_type}" as TaskType, \
+                              SELECT \
+                                predicted_TotalWorkingHours, \
+                                TeamId, \
+                                ClientId, \
+                                TaskType \
+                              FROM ML.PREDICT(MODEL `vlba-maintenance-and-service.MwwMs_Data.Facts_Model2`, \
+                                ( \
+                                SELECT \
+                                  ClientId, \
+                                  Quantity, \
+                                  TaskTeamWorkingExperience, \
+                                  TaskType, \
+                                 TeamId \
+                               FROM ( \
+                                 SELECT DISTINCT \
+                                   ClientId, \
+                                   Quantity, \
+                                   TaskTeamWorkingExperience, \
+                                    TaskType, \
                                     TeamId \
-                                    FROM ( \
-                                    SELECT DISTINCT \
-                                    ClientId, \
-                                    Quantity, \
-                                    TaskTeamWorkingExperience, \
-                                    "{task_type}" as TaskType, \
-                                    TeamId \
-                                    FROM `{dataset_id}.Team_Facts_Model2` \
-                                    ) \
-                                    )) \
-                                    ) \
-                                    SELECT p.predicted_TotalWorkingHours, p.TeamId,p.Quantity \
-                                    FROM predictions p \
-                                    JOIN ( \
-                                      SELECT predicted_TotalWorkingHours \
-                                     FROM predictions \
-                                      ORDER BY predicted_TotalWorkingHours \
-                                     LIMIT 20 \
-                                    ) m \
-                                    ON p.predicted_TotalWorkingHours = m.predicted_TotalWorkingHours \
-                                    ORDER BY predicted_TotalWorkingHours').result()
+                                  FROM `vlba-maintenance-and-service.MwwMs_Data.Team_Facts_Model2` \
+                                ) \
+                              )) \
+                            ) \
+                            SELECT \
+                              p.ClientId, \
+                              p.TeamId, \
+                              p.TaskType, \
+                              AVG(p.predicted_TotalWorkingHours) AS mean_predicted_TotalWorkingHours \
+                            FROM \
+                              predictions p \
+                            WHERE \
+                              p.ClientId = "{client_id}" AND \
+                              p.TaskType = "{task_type}" \
+                            GROUP BY \
+                              p.ClientId, \
+                              p.TeamId, \
+                              p.TaskType \
+                            ORDER BY mean_predicted_TotalWorkingHours').result()
 
         for row in table:
             best_teams.append(
                 {
-                    "working_time": row.predicted_TotalWorkingHours,
+                    "working_time": row.mean_predicted_TotalWorkingHours,
                     "team_id": row.TeamId
                 }
             )
