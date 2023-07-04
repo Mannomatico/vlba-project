@@ -18,7 +18,12 @@ Jobs
             <option value="Vehicle maintenance">Vehicle maintenance</option>
         </select>
         <input type="text" class="form-control" placeholder="Quantity" name="quantity">
-        <input type="text" class="form-control" placeholder="Client" name="client_id">
+        <select class="form-select" id="inputGroupSelect02" name="client_name">
+            <option selected value="Electronics repair">{{all_client_names[0]}}</option>
+            {% for client_name in all_client_names[1:] %}
+            <option value="{{client_name}}">{{client_name}}</option>
+            {% endfor %}
+        </select>
         <button class="btn btn-outline-secondary" type="submit" name="action" value="update">Create</button>
     </form>
 </div>
@@ -31,7 +36,7 @@ Jobs
                 <th scope="col">Task</th>
                 <th scope="col">Quantity</th>
                 <th scope="col">Date</th>
-                <th scope="col">Client_Id</th>
+                <th scope="col">Client</th>
                 <th scope="col">Employees</th>
                 <th scope="col">Expected Time</th>
                 <th></th>
@@ -43,9 +48,9 @@ Jobs
                 <td>{{job.task_type}}</td>
                 <td>{{job.quantity}}</td>
                 <td>{{job.date_created.strftime('%d.%m.%Y %H:%M:%S')}}</td>
-                <td>{{job.client_id}}</td>
-                <td>{{job.employee_id_1}}, {{job.employee_id_2}}</td>
-                <td>{{job.total_working_hours|int}}:{% set minutes = ((job.total_working_hours*60)|int)%60 %}{{minutes}}h</td>
+                <td>{{job.client_name}}</td>
+                <td>{{job.team_members}}</td>
+                <td>{{job.total_working_hours}}h</td>
                 <td>
                     <form action="" method="POST">
                         <input type="hidden" name="id" value="{{job.id}}">

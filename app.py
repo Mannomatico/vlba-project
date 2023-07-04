@@ -1,4 +1,3 @@
-import pprint
 from flask import Flask, render_template, request
 from flask_sqlalchemy import SQLAlchemy
 from google.cloud import bigquery
@@ -31,11 +30,10 @@ class Jobs(db.Model):
     quantity = db.Column(db.Integer, nullable=False)
     date_created = db.Column(db.DateTime, default=datetime.utcnow)
     client_id = db.Column(db.String(200), nullable=False)
-    employee_id_1 = db.Column(db.String(200), nullable=True)
-    employee_name_1 = db.Column(db.String(200), nullable=True)
-    employee_id_2 = db.Column(db.String(200), nullable=True)
-    employee_name_2 = db.Column(db.String(200), nullable=True)
+    client_name = db.Column(db.String(200), nullable=False)
+    team_members = db.Column(db.String(200), nullable=True)
     total_working_hours = db.Column(db.Double, nullable=True)
+    distance = db.Column(db.Double, nullable=True)
 
 
 @app.route("/", methods=["GET", "POST"])
@@ -43,14 +41,21 @@ def start_page():
     # job creation
     if request.method == "POST":
         if request.form["action"] == "update":
-            new_job = Jobs(
-                task_type=request.form["task_type"],
-                quantity=request.form["quantity"],
-                client_id=request.form["client_id"],
-                total_working_hours=3.3333333333
-            )
-            db.session.add(new_job)
-            db.session.commit()
+            if(request.form["quantity"].isnumeric()):
+                best_team = predict_best_team(request.form["task_type"], get_client_id(request.form["client_name"]), request.form["quantity"])
+                workers = get_team_members(best_team['team_id'])
+
+                new_job = Jobs(
+                    task_type=request.form["task_type"],
+                    quantity=request.form["quantity"],
+                    client_name=request.form["client_name"],
+                    client_id=get_client_id(request.form["client_name"]),
+                    total_working_hours= "%.2f" % best_team["working_time"],
+                    team_id=best_team["team_id"],
+                    team_members=workers
+                )
+                db.session.add(new_job)
+                db.session.commit()
 
     # job deletion
     if request.method == "POST":
@@ -68,14 +73,18 @@ def start_page():
     # get all active jobs
     all_jobs = Jobs.query.order_by(Jobs.date_created).all()
 
+    # get all client_ids
+    all_clients = get_all_clients()
+    all_client_names = sorted([d['client_name'] for d in all_clients])
+
     # return page
-    return render_template("index.html", all_jobs=all_jobs)
+    return render_template("index.html", all_jobs=all_jobs, all_client_names = all_client_names)
 
 
 # get a list of clients
 def get_all_clients():
     table = client.query(QUERIES["get_all_clients"]).result()
-
+   
     clients = []
 
     for row in table:
@@ -86,6 +95,7 @@ def get_all_clients():
                 "location": row.Location,
             }
         )
+
     return clients
 
 
@@ -98,23 +108,147 @@ def get_location(client_id):
 # returns the best team and expected total working hours of a specific task, client_id and quantity
 def predict_best_team(task_type, client_id, quantity):
     table = client.query(QUERIES["predict_best_team"]).result()
+    best_teams = []
+    if((task_type == 'Bike repair') | (task_type == 'Electronics repair') | (task_type == 'Engine check')):
+        table = client.query(f'WITH predictions AS ( \
+                                    SELECT predicted_TotalWorkingHours, TeamId,Quantity \
+                                    FROM ML.PREDICT(MODEL `{dataset_id}.Facts_Model1`, \
+                                    (SELECT \
+                                    ClientId, \
+                                    Quantity, \
+                                    TaskTeamWorkingExperience, \
+                                    "{task_type}" as TaskType, \
+                                    TeamId \
+                                    FROM ( \
+                                    SELECT DISTINCT \
+                                    ClientId, \
+                                    Quantity, \
+                                    TaskTeamWorkingExperience, \
+                                    "{task_type}" as TaskType, \
+                                    TeamId \
+                                    FROM `{dataset_id}.Team_Facts_Model1` \
+                                    ) \
+                                    )) \
+                                    ) \
+                                    SELECT p.predicted_TotalWorkingHours, p.TeamId,p.Quantity \
+                                    FROM predictions p \
+                                    JOIN ( \
+                                      SELECT predicted_TotalWorkingHours \
+                                     FROM predictions \
+                                      ORDER BY predicted_TotalWorkingHours \
+                                     LIMIT 20 \
+                                    ) m \
+                                    ON p.predicted_TotalWorkingHours = m.predicted_TotalWorkingHours \
+                                    ORDER BY predicted_TotalWorkingHours').result()
 
-    teams = []
+        for row in table:
+            best_teams.append(
+                {
+                    "working_time": row.predicted_TotalWorkingHours,
+                    "team_id": row.TeamId
+                }
+            )
+    else:
+        table = client.query(f'WITH predictions AS ( \
+                                    SELECT predicted_TotalWorkingHours, TeamId,Quantity \
+                                    FROM ML.PREDICT(MODEL `{dataset_id}.Facts_Model2`, \
+                                    (SELECT \
+                                    ClientId, \
+                                    Quantity, \
+                                    TaskTeamWorkingExperience, \
+                                    "{task_type}" as TaskType, \
+                                    TeamId \
+                                    FROM ( \
+                                    SELECT DISTINCT \
+                                    ClientId, \
+                                    Quantity, \
+                                    TaskTeamWorkingExperience, \
+                                    "{task_type}" as TaskType, \
+                                    TeamId \
+                                    FROM `{dataset_id}.Team_Facts_Model2` \
+                                    ) \
+                                    )) \
+                                    ) \
+                                    SELECT p.predicted_TotalWorkingHours, p.TeamId,p.Quantity \
+                                    FROM predictions p \
+                                    JOIN ( \
+                                      SELECT predicted_TotalWorkingHours \
+                                     FROM predictions \
+                                      ORDER BY predicted_TotalWorkingHours \
+                                     LIMIT 20 \
+                                    ) m \
+                                    ON p.predicted_TotalWorkingHours = m.predicted_TotalWorkingHours \
+                                    ORDER BY predicted_TotalWorkingHours').result()
+
+        for row in table:
+            best_teams.append(
+                {
+                    "working_time": row.predicted_TotalWorkingHours,
+                    "team_id": row.TeamId
+                }
+            )
+
+    not_available_teams = []
+    all_jobs = Jobs.query.order_by(Jobs.date_created).all()
+
+    for job in all_jobs:
+        not_available_teams.append(job.team_members)
+
+    for team in best_teams:
+        team_employees = get_team_members_as_list(team['team_id'])
+        team_available = True
+        for employee in team_employees:
+            for team2 in not_available_teams:
+                if employee in team2:
+                    team_available = False
+        if team_available:
+            team['working_time'] = team['working_time']*float(quantity)
+            return team
+        
+    return(
+        {
+            "working_time": 0,
+            "team_id": 0
+        }
+    )
+
+
+# returns the team members of a team_id as string
+def get_team_members(team_id):
+    team_data = get_team_members_as_list(team_id)
+
+    if len(team_data) == 0:
+        return ""
+    elif len(team_data) == 1:
+        return team_data[0]
+    else:
+        return team_data[0] + ", " + team_data[1]
+
+
+# returns the team members of a team_id as string
+def get_team_members_as_list(team_id):
+    table = client.query(f"SELECT DISTINCT ServiceEmployeeId \
+                        FROM `{dataset_id}.Team_Facts` AS a \
+                        INNER JOIN `{dataset_id}.Assigned_Employess_Task` AS b \
+                        ON a.ServiceTaskId = b.ServiceTaskId \
+                        WHERE TeamId={team_id}").result()
+    
+    team_data = []
 
     for row in table:
-        teams.append(
-            {
-                "client_id": row.ClientId,
-                "client_name": row.ClientName,
-                "location": row.Location,
-            }
-        )
-    return clients
+        team_data.append(row.ServiceEmployeeId)
+
+    return team_data
 
 
-# returns the team members of a team_id
-def get_team_members(team_id):
-    return 0
+# returns client name from client_id
+def get_client_id(client_name):
+    clients = get_all_clients()
+    client_id = ""
+    for i in clients:
+        if i["client_name"] == client_name:
+            client_id = i["client_id"]
+    return client_id
 
 
 if __name__ == "__main__":
